@@ -26,8 +26,12 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+        // Send a ping to confirm a successful connection
+        await client.db("admin").command({ ping: 1 });
+
 
     const coffeeCollection = client.db("coffeeDB").collection("coffee");
+    const userCollection= client.db('coffeeDB').collection('users');
 
     //read the data
     app.get("/coffee", async (req, res) => {
@@ -47,7 +51,7 @@ async function run() {
     //create the data
     app.post("/coffee", async (req, res) => {
       const newCoffee = req.body;
-      console.log(newCoffee);
+      // console.log(newCoffee);
       const result = await coffeeCollection.insertOne(newCoffee);
       res.send(result);
     });
@@ -82,8 +86,42 @@ async function run() {
       res.send(result);
     });
 
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    //------------------------//store user in database\\-----------------------\\
+    app.get('/users', async(req, res) => {
+      const cursor = userCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+
+    app.post('/users', async(req, res) => {
+      const newUser = req.body;
+      // console.log('creating new user', newUser);
+      const result = await userCollection.insertOne(newUser);
+      res.send(result);
+    })
+
+    //update with more info 
+    app.patch('/users', async(req, res) => {
+      const email = req.body.email;
+      const filter = {email};
+      const updatedDoc = {
+        $set: {
+          lastSignInTime: req.body?.lastSignInTime
+        }
+      }
+
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
+
+    app.delete('/users/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    })
+
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
